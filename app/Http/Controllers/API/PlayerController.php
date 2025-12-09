@@ -60,7 +60,14 @@ class PlayerController extends Controller
         $query = Player::with('team');
 
         if ($teamId) {
-            $query->where('team_id', $teamId);
+            // Support lookup by numeric ID or team abbreviation
+            if (is_numeric($teamId)) {
+                $query->where('team_id', $teamId);
+            } else {
+                $query->whereHas('team', function ($q) use ($teamId) {
+                    $q->whereRaw('LOWER(abbreviation) = ?', [strtolower($teamId)]);
+                });
+            }
         }
 
         if ($search) {
@@ -81,7 +88,14 @@ class PlayerController extends Controller
         $query = Player::with('team');
 
         if ($teamId) {
-            $query->where('team_id', $teamId);
+            // Support lookup by numeric ID or team abbreviation
+            if (is_numeric($teamId)) {
+                $query->where('team_id', $teamId);
+            } else {
+                $query->whereHas('team', function ($q) use ($teamId) {
+                    $q->whereRaw('LOWER(abbreviation) = ?', [strtolower($teamId)]);
+                });
+            }
         }
 
         if ($search) {
