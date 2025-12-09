@@ -318,6 +318,7 @@ class GamesController extends Controller
                 'longitude' => (float) ($game->homeTeam->arena_longitude ?? 0),
             ],
             'scheduledAt' => $game->scheduled_at->toISOString(),
+            'scheduleDate' => $game->scheduled_at->toDateString(),
             'status' => $game->status,
         ];
     }
