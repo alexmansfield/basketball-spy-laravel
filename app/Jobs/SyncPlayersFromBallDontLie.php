@@ -15,14 +15,14 @@ class SyncPlayersFromBallDontLie implements ShouldQueue
 
     public int $tries = 3;
     public int $backoff = 120;
-    public int $timeout = 1800; // 30 minutes - players take longer due to pagination
+    public int $timeout = 600; // 10 minutes - only active players now
 
     /**
      * Execute the job.
      */
     public function handle(BallDontLieService $api): void
     {
-        Log::info('SyncPlayersFromBallDontLie: Starting player sync');
+        Log::info('SyncPlayersFromBallDontLie: Starting active player sync');
 
         // Build team lookup by BallDontLie ID
         $teamsByBdlId = Team::whereNotNull('balldontlie_id')
@@ -34,9 +34,24 @@ class SyncPlayersFromBallDontLie implements ShouldQueue
             return;
         }
 
+        // Get only active players (single API call, ~500 players)
+        $activePlayers = $api->getActivePlayers();
+
+        if (empty($activePlayers)) {
+            Log::warning('SyncPlayersFromBallDontLie: No active players returned from API');
+            return;
+        }
+
+        Log::info('SyncPlayersFromBallDontLie: Fetched active players', [
+            'count' => count($activePlayers),
+        ]);
+
+        // Reset all players to inactive first
+        Player::query()->update(['is_active' => false]);
+
         $stats = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'total' => 0];
 
-        foreach ($api->getAllPlayers() as $playerData) {
+        foreach ($activePlayers as $playerData) {
             $stats['total']++;
             $bdlId = $playerData['id'] ?? null;
 
@@ -53,6 +68,7 @@ class SyncPlayersFromBallDontLie implements ShouldQueue
                 // Player has no valid team assignment
                 Log::debug('SyncPlayersFromBallDontLie: Player has no valid team', [
                     'player_id' => $bdlId,
+                    'player_name' => ($playerData['first_name'] ?? '') . ' ' . ($playerData['last_name'] ?? ''),
                     'team_bdl_id' => $teamBdlId,
                 ]);
                 $stats['skipped']++;
@@ -76,6 +92,7 @@ class SyncPlayersFromBallDontLie implements ShouldQueue
                 'position' => $playerData['position'] ?? '',
                 'height' => $height,
                 'weight' => $weight,
+                'is_active' => true,
                 'extra_attributes' => [
                     'first_name' => $playerData['first_name'] ?? null,
                     'last_name' => $playerData['last_name'] ?? null,
@@ -99,49 +116,8 @@ class SyncPlayersFromBallDontLie implements ShouldQueue
                 Player::create($playerAttributes);
                 $stats['created']++;
             }
-
-            // Log progress every 100 players
-            if ($stats['total'] % 100 === 0) {
-                Log::info('SyncPlayersFromBallDontLie: Progress', $stats);
-            }
         }
 
         Log::info('SyncPlayersFromBallDontLie: Sync completed', $stats);
-
-        // Now mark active players
-        $this->markActivePlayers($api);
-    }
-
-    /**
-     * Mark active players using the /players/active endpoint.
-     */
-    protected function markActivePlayers(BallDontLieService $api): void
-    {
-        Log::info('SyncPlayersFromBallDontLie: Fetching active players list');
-
-        $activePlayers = $api->getActivePlayers();
-
-        if (empty($activePlayers)) {
-            Log::warning('SyncPlayersFromBallDontLie: No active players returned');
-            return;
-        }
-
-        // Get all active player BallDontLie IDs
-        $activeBdlIds = collect($activePlayers)->pluck('id')->toArray();
-
-        Log::info('SyncPlayersFromBallDontLie: Marking active players', [
-            'active_count' => count($activeBdlIds),
-        ]);
-
-        // Reset all players to inactive first
-        Player::query()->update(['is_active' => false]);
-
-        // Mark active players
-        $updated = Player::whereIn('balldontlie_id', $activeBdlIds)
-            ->update(['is_active' => true]);
-
-        Log::info('SyncPlayersFromBallDontLie: Active players marked', [
-            'marked_active' => $updated,
-        ]);
     }
 }
