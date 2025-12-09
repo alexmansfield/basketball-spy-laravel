@@ -24,6 +24,11 @@ class Team extends Model
         'url',
         'logo_url',
         'color',
+        'arena_name',
+        'arena_city',
+        'arena_state',
+        'arena_latitude',
+        'arena_longitude',
     ];
 
     /**

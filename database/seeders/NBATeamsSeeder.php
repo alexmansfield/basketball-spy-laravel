@@ -10,7 +10,7 @@ class NBATeamsSeeder extends Seeder
     /**
      * Run the database seeds.
      *
-     * Seeds all 30 NBA teams with official logos from NBA CDN
+     * Seeds all 30 NBA teams with official logos from NBA CDN and arena locations
      */
     public function run(): void
     {
@@ -25,6 +25,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/celtics/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612738/primary/L/logo.svg',
                 'color' => '#007A33',
+                'arena_name' => 'TD Garden',
+                'arena_city' => 'Boston',
+                'arena_state' => 'MA',
+                'arena_latitude' => 42.3662,
+                'arena_longitude' => -71.0621,
             ],
             [
                 'name' => 'Brooklyn Nets',
@@ -35,6 +40,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/nets/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612751/primary/L/logo.svg',
                 'color' => '#000000',
+                'arena_name' => 'Barclays Center',
+                'arena_city' => 'Brooklyn',
+                'arena_state' => 'NY',
+                'arena_latitude' => 40.6826,
+                'arena_longitude' => -73.9754,
             ],
             [
                 'name' => 'New York Knicks',
@@ -45,6 +55,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/knicks/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612752/primary/L/logo.svg',
                 'color' => '#006BB6',
+                'arena_name' => 'Madison Square Garden',
+                'arena_city' => 'New York',
+                'arena_state' => 'NY',
+                'arena_latitude' => 40.7505,
+                'arena_longitude' => -73.9934,
             ],
             [
                 'name' => 'Philadelphia 76ers',
@@ -55,6 +70,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/sixers/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612755/primary/L/logo.svg',
                 'color' => '#006BB6',
+                'arena_name' => 'Wells Fargo Center',
+                'arena_city' => 'Philadelphia',
+                'arena_state' => 'PA',
+                'arena_latitude' => 39.9012,
+                'arena_longitude' => -75.1720,
             ],
             [
                 'name' => 'Toronto Raptors',
@@ -65,6 +85,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/raptors/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612761/primary/L/logo.svg',
                 'color' => '#CE1141',
+                'arena_name' => 'Scotiabank Arena',
+                'arena_city' => 'Toronto',
+                'arena_state' => 'ON',
+                'arena_latitude' => 43.6435,
+                'arena_longitude' => -79.3791,
             ],
 
             // Central Division
@@ -77,6 +102,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/bulls/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612741/primary/L/logo.svg',
                 'color' => '#CE1141',
+                'arena_name' => 'United Center',
+                'arena_city' => 'Chicago',
+                'arena_state' => 'IL',
+                'arena_latitude' => 41.8807,
+                'arena_longitude' => -87.6742,
             ],
             [
                 'name' => 'Cleveland Cavaliers',
@@ -87,6 +117,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/cavaliers/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612739/primary/L/logo.svg',
                 'color' => '#860038',
+                'arena_name' => 'Rocket Mortgage FieldHouse',
+                'arena_city' => 'Cleveland',
+                'arena_state' => 'OH',
+                'arena_latitude' => 41.4965,
+                'arena_longitude' => -81.6882,
             ],
             [
                 'name' => 'Detroit Pistons',
@@ -97,6 +132,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/pistons/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612765/primary/L/logo.svg',
                 'color' => '#C8102E',
+                'arena_name' => 'Little Caesars Arena',
+                'arena_city' => 'Detroit',
+                'arena_state' => 'MI',
+                'arena_latitude' => 42.3411,
+                'arena_longitude' => -83.0553,
             ],
             [
                 'name' => 'Indiana Pacers',
@@ -107,6 +147,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/pacers/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612754/primary/L/logo.svg',
                 'color' => '#002D62',
+                'arena_name' => 'Gainbridge Fieldhouse',
+                'arena_city' => 'Indianapolis',
+                'arena_state' => 'IN',
+                'arena_latitude' => 39.7640,
+                'arena_longitude' => -86.1555,
             ],
             [
                 'name' => 'Milwaukee Bucks',
@@ -117,6 +162,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/bucks/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612749/primary/L/logo.svg',
                 'color' => '#00471B',
+                'arena_name' => 'Fiserv Forum',
+                'arena_city' => 'Milwaukee',
+                'arena_state' => 'WI',
+                'arena_latitude' => 43.0451,
+                'arena_longitude' => -87.9173,
             ],
 
             // Southeast Division
@@ -129,6 +179,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/hawks/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612737/primary/L/logo.svg',
                 'color' => '#E03A3E',
+                'arena_name' => 'State Farm Arena',
+                'arena_city' => 'Atlanta',
+                'arena_state' => 'GA',
+                'arena_latitude' => 33.7573,
+                'arena_longitude' => -84.3963,
             ],
             [
                 'name' => 'Charlotte Hornets',
@@ -139,6 +194,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/hornets/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612766/primary/L/logo.svg',
                 'color' => '#1D1160',
+                'arena_name' => 'Spectrum Center',
+                'arena_city' => 'Charlotte',
+                'arena_state' => 'NC',
+                'arena_latitude' => 35.2251,
+                'arena_longitude' => -80.8392,
             ],
             [
                 'name' => 'Miami Heat',
@@ -149,6 +209,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/heat/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612748/primary/L/logo.svg',
                 'color' => '#98002E',
+                'arena_name' => 'Kaseya Center',
+                'arena_city' => 'Miami',
+                'arena_state' => 'FL',
+                'arena_latitude' => 25.7814,
+                'arena_longitude' => -80.1870,
             ],
             [
                 'name' => 'Orlando Magic',
@@ -159,6 +224,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/magic/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612753/primary/L/logo.svg',
                 'color' => '#0077C0',
+                'arena_name' => 'Amway Center',
+                'arena_city' => 'Orlando',
+                'arena_state' => 'FL',
+                'arena_latitude' => 28.5392,
+                'arena_longitude' => -81.3839,
             ],
             [
                 'name' => 'Washington Wizards',
@@ -169,6 +239,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/wizards/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612764/primary/L/logo.svg',
                 'color' => '#002B5C',
+                'arena_name' => 'Capital One Arena',
+                'arena_city' => 'Washington',
+                'arena_state' => 'DC',
+                'arena_latitude' => 38.8981,
+                'arena_longitude' => -77.0209,
             ],
 
             // Northwest Division
@@ -181,6 +256,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/nuggets/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612743/primary/L/logo.svg',
                 'color' => '#0E2240',
+                'arena_name' => 'Ball Arena',
+                'arena_city' => 'Denver',
+                'arena_state' => 'CO',
+                'arena_latitude' => 39.7487,
+                'arena_longitude' => -105.0077,
             ],
             [
                 'name' => 'Minnesota Timberwolves',
@@ -191,6 +271,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/timberwolves/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612750/primary/L/logo.svg',
                 'color' => '#0C2340',
+                'arena_name' => 'Target Center',
+                'arena_city' => 'Minneapolis',
+                'arena_state' => 'MN',
+                'arena_latitude' => 44.9795,
+                'arena_longitude' => -93.2761,
             ],
             [
                 'name' => 'Oklahoma City Thunder',
@@ -201,6 +286,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/thunder/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612760/primary/L/logo.svg',
                 'color' => '#007AC1',
+                'arena_name' => 'Paycom Center',
+                'arena_city' => 'Oklahoma City',
+                'arena_state' => 'OK',
+                'arena_latitude' => 35.4634,
+                'arena_longitude' => -97.5151,
             ],
             [
                 'name' => 'Portland Trail Blazers',
@@ -211,6 +301,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/blazers/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612757/primary/L/logo.svg',
                 'color' => '#E03A3E',
+                'arena_name' => 'Moda Center',
+                'arena_city' => 'Portland',
+                'arena_state' => 'OR',
+                'arena_latitude' => 45.5316,
+                'arena_longitude' => -122.6668,
             ],
             [
                 'name' => 'Utah Jazz',
@@ -221,6 +316,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/jazz/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612762/primary/L/logo.svg',
                 'color' => '#002B5C',
+                'arena_name' => 'Delta Center',
+                'arena_city' => 'Salt Lake City',
+                'arena_state' => 'UT',
+                'arena_latitude' => 40.7683,
+                'arena_longitude' => -111.9011,
             ],
 
             // Pacific Division
@@ -233,6 +333,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/warriors/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612744/primary/L/logo.svg',
                 'color' => '#1D428A',
+                'arena_name' => 'Chase Center',
+                'arena_city' => 'San Francisco',
+                'arena_state' => 'CA',
+                'arena_latitude' => 37.7680,
+                'arena_longitude' => -122.3879,
             ],
             [
                 'name' => 'LA Clippers',
@@ -243,6 +348,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/clippers/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612746/primary/L/logo.svg',
                 'color' => '#C8102E',
+                'arena_name' => 'Intuit Dome',
+                'arena_city' => 'Inglewood',
+                'arena_state' => 'CA',
+                'arena_latitude' => 33.9425,
+                'arena_longitude' => -118.3417,
             ],
             [
                 'name' => 'Los Angeles Lakers',
@@ -253,6 +363,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/lakers/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612747/primary/L/logo.svg',
                 'color' => '#552583',
+                'arena_name' => 'Crypto.com Arena',
+                'arena_city' => 'Los Angeles',
+                'arena_state' => 'CA',
+                'arena_latitude' => 34.0430,
+                'arena_longitude' => -118.2673,
             ],
             [
                 'name' => 'Phoenix Suns',
@@ -263,6 +378,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/suns/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612756/primary/L/logo.svg',
                 'color' => '#1D1160',
+                'arena_name' => 'Footprint Center',
+                'arena_city' => 'Phoenix',
+                'arena_state' => 'AZ',
+                'arena_latitude' => 33.4457,
+                'arena_longitude' => -112.0712,
             ],
             [
                 'name' => 'Sacramento Kings',
@@ -273,6 +393,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/kings/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612758/primary/L/logo.svg',
                 'color' => '#5A2D81',
+                'arena_name' => 'Golden 1 Center',
+                'arena_city' => 'Sacramento',
+                'arena_state' => 'CA',
+                'arena_latitude' => 38.5802,
+                'arena_longitude' => -121.4997,
             ],
 
             // Southwest Division
@@ -285,6 +410,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/mavericks/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612742/primary/L/logo.svg',
                 'color' => '#00538C',
+                'arena_name' => 'American Airlines Center',
+                'arena_city' => 'Dallas',
+                'arena_state' => 'TX',
+                'arena_latitude' => 32.7905,
+                'arena_longitude' => -96.8103,
             ],
             [
                 'name' => 'Houston Rockets',
@@ -295,6 +425,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/rockets/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612745/primary/L/logo.svg',
                 'color' => '#CE1141',
+                'arena_name' => 'Toyota Center',
+                'arena_city' => 'Houston',
+                'arena_state' => 'TX',
+                'arena_latitude' => 29.7508,
+                'arena_longitude' => -95.3621,
             ],
             [
                 'name' => 'Memphis Grizzlies',
@@ -305,6 +440,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/grizzlies/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612763/primary/L/logo.svg',
                 'color' => '#5D76A9',
+                'arena_name' => 'FedExForum',
+                'arena_city' => 'Memphis',
+                'arena_state' => 'TN',
+                'arena_latitude' => 35.1382,
+                'arena_longitude' => -90.0506,
             ],
             [
                 'name' => 'New Orleans Pelicans',
@@ -315,6 +455,11 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/pelicans/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612740/primary/L/logo.svg',
                 'color' => '#0C2340',
+                'arena_name' => 'Smoothie King Center',
+                'arena_city' => 'New Orleans',
+                'arena_state' => 'LA',
+                'arena_latitude' => 29.9490,
+                'arena_longitude' => -90.0821,
             ],
             [
                 'name' => 'San Antonio Spurs',
@@ -325,11 +470,19 @@ class NBATeamsSeeder extends Seeder
                 'url' => 'https://www.nba.com/spurs/',
                 'logo_url' => 'https://cdn.nba.com/logos/nba/1610612759/primary/L/logo.svg',
                 'color' => '#C4CED4',
+                'arena_name' => 'Frost Bank Center',
+                'arena_city' => 'San Antonio',
+                'arena_state' => 'TX',
+                'arena_latitude' => 29.4270,
+                'arena_longitude' => -98.4375,
             ],
         ];
 
         foreach ($teams as $team) {
-            Team::create($team);
+            Team::updateOrCreate(
+                ['abbreviation' => $team['abbreviation']],
+                $team
+            );
         }
     }
 }

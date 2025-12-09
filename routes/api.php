@@ -6,6 +6,7 @@ use App\Http\Controllers\API\TeamController;
 use App\Http\Controllers\API\PlayerController;
 use App\Http\Controllers\API\ReportController;
 use App\Http\Controllers\API\AnalyticsController;
+use App\Http\Controllers\API\GamesController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,6 +28,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth routes
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
+
+    // Games
+    Route::get('/games/today', [GamesController::class, 'today']);
+    Route::get('/games/{date}', [GamesController::class, 'byDate']);
 
     // Teams (public within auth)
     Route::apiResource('teams', TeamController::class)->only(['index', 'show']);
