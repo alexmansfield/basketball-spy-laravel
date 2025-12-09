@@ -43,4 +43,8 @@ return [
         'key' => env('OPENAI_API_KEY'),
     ],
 
+    'perplexity' => [
+        'key' => env('PERPLEXITY_API_KEY'),
+    ],
+
 ];

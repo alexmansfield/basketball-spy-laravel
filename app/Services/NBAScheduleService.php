@@ -17,8 +17,8 @@ class NBAScheduleService
     private const CACHE_TTL = 3600;
 
     /**
-     * Fetch NBA games for a specific date using OpenAI with web search.
-     * Uses gpt-4o-mini for cost efficiency.
+     * Fetch NBA games for a specific date using Perplexity with web search.
+     * Falls back to OpenAI if Perplexity is not configured.
      */
     public function fetchGamesForDate(string $date): array
     {
@@ -27,21 +27,36 @@ class NBAScheduleService
         // Check cache first
         $cached = Cache::get($cacheKey);
         if ($cached !== null) {
+            Log::info('NBAScheduleService: Returning cached result', ['date' => $date]);
             return $cached;
         }
 
-        $apiKey = config('services.openai.key');
-        if (empty($apiKey)) {
-            Log::warning('NBAScheduleService: OPENAI_API_KEY not configured');
+        // Try Perplexity first (has web search built-in)
+        $perplexityKey = config('services.perplexity.key');
+        if (!empty($perplexityKey)) {
+            try {
+                $games = $this->fetchFromPerplexity($date, $perplexityKey);
+                if (!empty($games)) {
+                    Cache::put($cacheKey, $games, self::CACHE_TTL);
+                    return $games;
+                }
+            } catch (\Exception $e) {
+                Log::warning('NBAScheduleService: Perplexity failed, trying OpenAI', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        // Fallback to OpenAI
+        $openaiKey = config('services.openai.key');
+        if (empty($openaiKey)) {
+            Log::warning('NBAScheduleService: No API keys configured');
             return [];
         }
 
         try {
-            $games = $this->fetchFromOpenAI($date, $apiKey);
-
-            // Cache the result
+            $games = $this->fetchFromOpenAI($date, $openaiKey);
             Cache::put($cacheKey, $games, self::CACHE_TTL);
-
             return $games;
         } catch (\Exception $e) {
             Log::error('NBAScheduleService: Failed to fetch schedule', [
@@ -50,6 +65,103 @@ class NBAScheduleService
             ]);
             return [];
         }
+    }
+
+    /**
+     * Fetch schedule from Perplexity API with built-in web search.
+     * This is the preferred method as it has real-time web access.
+     */
+    protected function fetchFromPerplexity(string $date, string $apiKey): array
+    {
+        $formattedDate = Carbon::parse($date)->format('F j, Y');
+        $dayOfWeek = Carbon::parse($date)->format('l');
+
+        // Get team abbreviations from our database for the prompt
+        $teamAbbrs = Team::pluck('abbreviation')->implode(', ');
+
+        $prompt = <<<PROMPT
+NBA schedule {$formattedDate}
+
+Return ONLY a JSON array of today's NBA games:
+[
+  {
+    "home_team": "LAL",
+    "away_team": "BOS",
+    "scheduled_time": "7:30 PM",
+    "timezone": "PT",
+    "arena": "Crypto.com Arena"
+  }
+]
+
+Valid team abbreviations: {$teamAbbrs}
+
+If no games, return: []
+
+Include the local timezone for each game (PT, MT, CT, or ET).
+PROMPT;
+
+        Log::info('NBAScheduleService: Calling Perplexity', [
+            'date' => $date,
+            'formatted_date' => $formattedDate,
+        ]);
+
+        $response = Http::timeout(60)
+            ->withHeaders([
+                'Authorization' => "Bearer {$apiKey}",
+                'Content-Type' => 'application/json',
+            ])
+            ->post('https://api.perplexity.ai/chat/completions', [
+                'model' => 'sonar',
+                'messages' => [
+                    [
+                        'role' => 'system',
+                        'content' => 'You are a helpful assistant that provides NBA game schedules in JSON format only. Search for the current NBA schedule. Never include markdown formatting or explanations - only return valid JSON.'
+                    ],
+                    [
+                        'role' => 'user',
+                        'content' => $prompt
+                    ]
+                ],
+                'temperature' => 0.1,
+                'max_tokens' => 2000,
+            ]);
+
+        if (!$response->successful()) {
+            Log::error('NBAScheduleService: Perplexity API error', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+            return [];
+        }
+
+        $data = $response->json();
+
+        Log::info('NBAScheduleService: Perplexity response received', [
+            'has_choices' => isset($data['choices']),
+        ]);
+
+        // Extract the text content from the response
+        $content = $this->extractContent($data);
+
+        Log::info('NBAScheduleService: Perplexity content', [
+            'content_length' => strlen($content),
+            'content_preview' => substr($content, 0, 300),
+        ]);
+
+        if (empty($content)) {
+            Log::warning('NBAScheduleService: Empty response from Perplexity');
+            return [];
+        }
+
+        // Parse the JSON response
+        $games = $this->parseGamesJson($content, $date);
+
+        Log::info('NBAScheduleService: Fetched games from Perplexity', [
+            'date' => $date,
+            'games_count' => count($games),
+        ]);
+
+        return $games;
     }
 
     /**
@@ -67,27 +179,24 @@ class NBAScheduleService
 
         // Use chat completions API which is reliable
         $prompt = <<<PROMPT
-You are an NBA schedule assistant. Based on your knowledge of the 2024-2025 NBA season schedule, provide the NBA games scheduled for {$formattedDate} ({$dayOfWeek}).
+NBA schedule {$formattedDate}
 
-Return ONLY a valid JSON array of games with this exact structure (no markdown, no explanation, no other text):
+Return ONLY a JSON array:
 [
   {
     "home_team": "LAL",
     "away_team": "BOS",
-    "scheduled_time": "7:30 PM ET",
+    "scheduled_time": "7:30 PM",
+    "timezone": "PT",
     "arena": "Crypto.com Arena"
   }
 ]
 
-Use these exact team abbreviations: {$teamAbbrs}
+Valid abbreviations: {$teamAbbrs}
 
-If you don't know the exact schedule for this date, return an empty array: []
+If unknown or no games: []
 
-Rules:
-- Use standard 3-letter NBA team abbreviations from the list above
-- Include ALL games you know are scheduled for this date
-- Times should be in Eastern Time (ET)
-- Return ONLY the JSON array, nothing else - no explanations
+Include local timezone (PT, MT, CT, or ET) for each game.
 PROMPT;
 
         Log::info('NBAScheduleService: Calling OpenAI', [
@@ -201,8 +310,9 @@ PROMPT;
                 continue;
             }
 
-            // Parse scheduled time
-            $scheduledAt = $this->parseScheduledTime($date, $game['scheduled_time'] ?? '7:00 PM ET');
+            // Parse scheduled time with timezone
+            $timezone = $game['timezone'] ?? null;
+            $scheduledAt = $this->parseScheduledTime($date, $game['scheduled_time'] ?? '7:00 PM', $timezone);
 
             $games[] = [
                 'home_team_id' => $homeTeam->id,
@@ -217,17 +327,38 @@ PROMPT;
     }
 
     /**
-     * Parse a time string like "7:30 PM ET" into a Carbon datetime.
+     * Parse a time string like "7:30 PM" with timezone into a Carbon datetime.
      */
-    protected function parseScheduledTime(string $date, string $timeStr): Carbon
+    protected function parseScheduledTime(string $date, string $timeStr, ?string $timezone = null): Carbon
     {
-        // Remove timezone indicator
-        $timeStr = preg_replace('/\s*(ET|EST|EDT|PT|PST|PDT|CT|CST|CDT|MT|MST|MDT)\s*$/i', '', $timeStr);
+        // Map timezone abbreviations to PHP timezone names
+        $tzMap = [
+            'PT' => 'America/Los_Angeles',
+            'PST' => 'America/Los_Angeles',
+            'PDT' => 'America/Los_Angeles',
+            'MT' => 'America/Denver',
+            'MST' => 'America/Denver',
+            'MDT' => 'America/Denver',
+            'CT' => 'America/Chicago',
+            'CST' => 'America/Chicago',
+            'CDT' => 'America/Chicago',
+            'ET' => 'America/New_York',
+            'EST' => 'America/New_York',
+            'EDT' => 'America/New_York',
+        ];
+
+        // Extract timezone from time string if present
+        if (preg_match('/\s*(ET|EST|EDT|PT|PST|PDT|CT|CST|CDT|MT|MST|MDT)\s*$/i', $timeStr, $matches)) {
+            $timezone = strtoupper($matches[1]);
+            $timeStr = preg_replace('/\s*(ET|EST|EDT|PT|PST|PDT|CT|CST|CDT|MT|MST|MDT)\s*$/i', '', $timeStr);
+        }
+
         $timeStr = trim($timeStr);
+        $phpTimezone = $tzMap[$timezone ?? 'ET'] ?? 'America/New_York';
 
         try {
-            // Parse time in Eastern timezone, then convert to UTC for storage
-            $datetime = Carbon::parse("{$date} {$timeStr}", 'America/New_York');
+            // Parse time in the local timezone, then convert to UTC for storage
+            $datetime = Carbon::parse("{$date} {$timeStr}", $phpTimezone);
             return $datetime->utc();
         } catch (\Exception $e) {
             // Default to 7 PM ET if parsing fails
