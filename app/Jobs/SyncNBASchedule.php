@@ -16,8 +16,8 @@ class SyncNBASchedule implements ShouldQueue
     use Queueable;
 
     public int $tries = 3;
-    public int $backoff = 60;
-    public int $timeout = 120;
+    public int $backoff = 120;
+    public int $timeout = 300; // 5 minutes to handle 70-80 second API calls with buffer
 
     /**
      * OpenAI Responses API prompt ID for NBA schedule.
@@ -66,7 +66,8 @@ class SyncNBASchedule implements ShouldQueue
             ]);
 
             // Call OpenAI Responses API with the prompt
-            $response = Http::timeout(90)
+            // Extended timeout for web search which can take 70-80 seconds
+            $response = Http::timeout(180)
                 ->withHeaders([
                     'Authorization' => "Bearer {$apiKey}",
                     'Content-Type' => 'application/json',
