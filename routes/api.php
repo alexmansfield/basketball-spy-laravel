@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\TeamController;
@@ -55,5 +56,16 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Player analytics (all authenticated users)
         Route::get('players/{player}', [AnalyticsController::class, 'playerAnalytics']);
+    });
+
+    // Admin maintenance routes (super_admin only)
+    Route::prefix('admin')->middleware('role:super_admin')->group(function () {
+        Route::post('deduplicate', function () {
+            Artisan::call('app:deduplicate-data');
+            return response()->json([
+                'success' => true,
+                'output' => Artisan::output(),
+            ]);
+        });
     });
 });
