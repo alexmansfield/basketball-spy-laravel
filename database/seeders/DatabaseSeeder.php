@@ -27,10 +27,9 @@ class DatabaseSeeder extends Seeder
             PlayersSeeder::class,
         ]);
 
-        // Create test user (optional - can be commented out in production)
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // Seed admin and test user accounts
+        $this->call([
+            AdminSeeder::class,
         ]);
     }
 }
