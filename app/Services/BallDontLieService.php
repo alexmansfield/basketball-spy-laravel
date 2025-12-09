@@ -171,6 +171,15 @@ class BallDontLieService
     }
 
     /**
+     * Get active players (no pagination - returns all at once).
+     */
+    public function getActivePlayers(): array
+    {
+        $response = $this->request('players/active');
+        return $response['data'] ?? [];
+    }
+
+    /**
      * Get games with date filtering.
      *
      * @param array $dates Array of dates in YYYY-MM-DD format

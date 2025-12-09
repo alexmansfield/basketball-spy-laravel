@@ -58,9 +58,12 @@ class SyncHeadshots extends Command
             $nbaPlayerLookup[$name] = $nbaPlayer;
         }
 
-        // Get all our players that need headshots
-        $players = Player::whereNull('nba_player_id')
-            ->orWhereNull('headshot_url')
+        // Get only active players that need headshots
+        $players = Player::where('is_active', true)
+            ->where(function ($query) {
+                $query->whereNull('nba_player_id')
+                    ->orWhereNull('headshot_url');
+            })
             ->get();
 
         $this->info("Processing " . $players->count() . " players...");

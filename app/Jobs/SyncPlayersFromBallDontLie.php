@@ -107,5 +107,41 @@ class SyncPlayersFromBallDontLie implements ShouldQueue
         }
 
         Log::info('SyncPlayersFromBallDontLie: Sync completed', $stats);
+
+        // Now mark active players
+        $this->markActivePlayers($api);
+    }
+
+    /**
+     * Mark active players using the /players/active endpoint.
+     */
+    protected function markActivePlayers(BallDontLieService $api): void
+    {
+        Log::info('SyncPlayersFromBallDontLie: Fetching active players list');
+
+        $activePlayers = $api->getActivePlayers();
+
+        if (empty($activePlayers)) {
+            Log::warning('SyncPlayersFromBallDontLie: No active players returned');
+            return;
+        }
+
+        // Get all active player BallDontLie IDs
+        $activeBdlIds = collect($activePlayers)->pluck('id')->toArray();
+
+        Log::info('SyncPlayersFromBallDontLie: Marking active players', [
+            'active_count' => count($activeBdlIds),
+        ]);
+
+        // Reset all players to inactive first
+        Player::query()->update(['is_active' => false]);
+
+        // Mark active players
+        $updated = Player::whereIn('balldontlie_id', $activeBdlIds)
+            ->update(['is_active' => true]);
+
+        Log::info('SyncPlayersFromBallDontLie: Active players marked', [
+            'marked_active' => $updated,
+        ]);
     }
 }

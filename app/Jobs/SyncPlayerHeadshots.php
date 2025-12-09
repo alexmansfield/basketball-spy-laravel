@@ -51,9 +51,12 @@ class SyncPlayerHeadshots implements ShouldQueue
             $nbaPlayerLookup[$name] = $nbaPlayer;
         }
 
-        // Get all our players
-        $players = Player::whereNull('nba_player_id')
-            ->orWhereNull('headshot_url')
+        // Get only active players that need headshots
+        $players = Player::where('is_active', true)
+            ->where(function ($query) {
+                $query->whereNull('nba_player_id')
+                    ->orWhereNull('headshot_url');
+            })
             ->get();
 
         Log::info('SyncPlayerHeadshots: Processing players', ['count' => $players->count()]);

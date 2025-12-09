@@ -26,6 +26,7 @@ class Player extends Model
         'extra_attributes',
         'balldontlie_id',
         'nba_player_id',
+        'is_active',
     ];
 
     protected $casts = [
@@ -36,6 +37,7 @@ class Player extends Model
         'minutes_played' => 'integer',
         'average_minutes_played' => 'decimal:2',
         'extra_attributes' => 'array',
+        'is_active' => 'boolean',
     ];
 
     /**
