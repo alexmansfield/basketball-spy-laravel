@@ -50,6 +50,11 @@ class GamesController extends Controller
     {
         $cacheKey = "games:date:{$date}";
 
+        // Allow cache bypass with ?fresh=1 for debugging
+        if (request()->has('fresh')) {
+            Cache::forget($cacheKey);
+        }
+
         $data = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($date) {
             // First, check local database
             $games = Game::with(['homeTeam', 'awayTeam'])
