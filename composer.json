@@ -1,5 +1,0 @@
-{
-    "require": {
-        "laravel/nightwatch": "^1.19"
-    }
-}
