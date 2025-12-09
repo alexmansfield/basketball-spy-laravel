@@ -62,6 +62,13 @@ class GamesController extends Controller
                 ->orderBy('scheduled_at')
                 ->get();
 
+            // Debug: Log what we found
+            Log::info('GamesController: DB query for date', [
+                'date' => $date,
+                'games_count' => $games->count(),
+                'total_games_in_db' => Game::count(),
+            ]);
+
             // If no games in DB, try fetching from SportsBlaze API
             if ($games->isEmpty()) {
                 $games = $this->fetchGamesFromApi($date);
@@ -72,6 +79,10 @@ class GamesController extends Controller
                     return $this->formatGame($game);
                 })->toArray(),
                 'date' => $date,
+                'debug' => [
+                    'total_games_in_db' => Game::count(),
+                    'games_for_date' => $games->count(),
+                ],
             ];
         });
 
