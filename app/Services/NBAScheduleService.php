@@ -53,19 +53,23 @@ class NBAScheduleService
     }
 
     /**
-     * Fetch schedule from OpenAI with web search capability.
+     * Fetch schedule from OpenAI using Chat Completions API.
+     * Since we can't do live web search, we rely on the model's knowledge
+     * combined with known NBA schedule patterns.
      */
     protected function fetchFromOpenAI(string $date, string $apiKey): array
     {
         $formattedDate = Carbon::parse($date)->format('F j, Y');
+        $dayOfWeek = Carbon::parse($date)->format('l');
 
         // Get team abbreviations from our database for the prompt
         $teamAbbrs = Team::pluck('abbreviation')->implode(', ');
 
+        // Use chat completions API which is reliable
         $prompt = <<<PROMPT
-Search the web for the NBA game schedule for {$formattedDate}.
+You are an NBA schedule assistant. Based on your knowledge of the 2024-2025 NBA season schedule, provide the NBA games scheduled for {$formattedDate} ({$dayOfWeek}).
 
-Return ONLY a valid JSON array of games with this exact structure (no markdown, no explanation):
+Return ONLY a valid JSON array of games with this exact structure (no markdown, no explanation, no other text):
 [
   {
     "home_team": "LAL",
@@ -75,28 +79,41 @@ Return ONLY a valid JSON array of games with this exact structure (no markdown, 
   }
 ]
 
-Use these team abbreviations: {$teamAbbrs}
+Use these exact team abbreviations: {$teamAbbrs}
 
-If no games are scheduled for this date, return an empty array: []
+If you don't know the exact schedule for this date, return an empty array: []
 
-Important:
-- Use standard 3-letter NBA team abbreviations
-- Include ALL games scheduled for this date
+Rules:
+- Use standard 3-letter NBA team abbreviations from the list above
+- Include ALL games you know are scheduled for this date
 - Times should be in Eastern Time (ET)
-- Return ONLY the JSON array, nothing else
+- Return ONLY the JSON array, nothing else - no explanations
 PROMPT;
+
+        Log::info('NBAScheduleService: Calling OpenAI', [
+            'date' => $date,
+            'formatted_date' => $formattedDate,
+        ]);
 
         $response = Http::timeout(30)
             ->withHeaders([
                 'Authorization' => "Bearer {$apiKey}",
                 'Content-Type' => 'application/json',
             ])
-            ->post('https://api.openai.com/v1/responses', [
+            ->post('https://api.openai.com/v1/chat/completions', [
                 'model' => 'gpt-4o-mini',
-                'tools' => [
-                    ['type' => 'web_search_preview']
+                'messages' => [
+                    [
+                        'role' => 'system',
+                        'content' => 'You are a helpful assistant that provides NBA game schedules in JSON format only. Never include markdown formatting or explanations.'
+                    ],
+                    [
+                        'role' => 'user',
+                        'content' => $prompt
+                    ]
                 ],
-                'input' => $prompt,
+                'temperature' => 0.1,
+                'max_tokens' => 2000,
             ]);
 
         if (!$response->successful()) {
@@ -109,8 +126,17 @@ PROMPT;
 
         $data = $response->json();
 
+        Log::info('NBAScheduleService: OpenAI response received', [
+            'has_choices' => isset($data['choices']),
+        ]);
+
         // Extract the text content from the response
         $content = $this->extractContent($data);
+
+        Log::info('NBAScheduleService: Extracted content', [
+            'content_length' => strlen($content),
+            'content_preview' => substr($content, 0, 200),
+        ]);
 
         if (empty($content)) {
             Log::warning('NBAScheduleService: Empty response from OpenAI');
@@ -133,20 +159,7 @@ PROMPT;
      */
     protected function extractContent(array $data): string
     {
-        // Handle responses API format
-        if (isset($data['output'])) {
-            foreach ($data['output'] as $item) {
-                if ($item['type'] === 'message' && isset($item['content'])) {
-                    foreach ($item['content'] as $contentItem) {
-                        if ($contentItem['type'] === 'output_text') {
-                            return $contentItem['text'] ?? '';
-                        }
-                    }
-                }
-            }
-        }
-
-        // Fallback for chat completions format
+        // Chat completions format
         return $data['choices'][0]['message']['content'] ?? '';
     }
 

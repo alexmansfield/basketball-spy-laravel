@@ -238,17 +238,29 @@ class GamesController extends Controller
     }
 
     /**
-     * Fetch games using LLM with web search (fallback when SportsBlaze fails).
+     * Fetch games using LLM (fallback when SportsBlaze fails).
      */
     protected function fetchGamesFromLLM(string $date): \Illuminate\Database\Eloquent\Collection
     {
+        // Check if OpenAI key is configured
+        $openaiKey = config('services.openai.key');
+        if (empty($openaiKey)) {
+            request()->attributes->set('llm_error', 'OPENAI_API_KEY not configured');
+            Log::warning('GamesController: OPENAI_API_KEY not configured');
+            return Game::query()->where('id', 0)->get();
+        }
+
         $service = app(NBAScheduleService::class);
 
         try {
+            Log::info('GamesController: Attempting LLM fetch', ['date' => $date]);
             $gamesData = $service->fetchGamesForDate($date);
 
             if (empty($gamesData)) {
-                request()->attributes->set('llm_response', ['games_found' => 0]);
+                request()->attributes->set('llm_response', [
+                    'games_found' => 0,
+                    'message' => 'LLM returned no games for this date',
+                ]);
                 return Game::query()->where('id', 0)->get();
             }
 
@@ -269,6 +281,7 @@ class GamesController extends Controller
         } catch (\Exception $e) {
             Log::error('GamesController: LLM fetch failed', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
                 'date' => $date,
             ]);
             request()->attributes->set('llm_error', $e->getMessage());
