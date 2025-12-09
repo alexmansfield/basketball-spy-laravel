@@ -15,7 +15,7 @@ class TeamController extends Controller
      * GET /api/teams?league=NBA&search=warriors
      *
      * Supports filtering by league and searching by name.
-     * Returns paginated results with logo and color for mobile app.
+     * Returns teams array in format expected by mobile app: { teams: [...] }
      */
     public function index(Request $request): JsonResponse
     {
@@ -40,11 +40,24 @@ class TeamController extends Controller
         // Order by league and name
         $query->orderBy('league')->orderBy('name');
 
-        // Paginate results (15 per page by default, configurable via ?per_page=)
-        $perPage = $request->get('per_page', 15);
-        $teams = $query->paginate($perPage);
+        // Get all teams (mobile app fetches all at once for local filtering)
+        $teams = $query->get();
 
-        return response()->json($teams);
+        // Return in format expected by mobile app
+        return response()->json([
+            'teams' => $teams->map(function ($team) {
+                return [
+                    'id' => (string) $team->id,
+                    'name' => $team->name,
+                    'abbreviation' => $team->abbreviation,
+                    'location' => $team->location,
+                    'nickname' => $team->nickname,
+                    'league' => $team->league,
+                    'logoUrl' => $team->logo_url,
+                    'color' => $team->color,
+                ];
+            }),
+        ]);
     }
 
     /**
