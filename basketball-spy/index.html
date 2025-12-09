@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basketball Spy</title>
+    <script>
+        (function() {
+            var link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'styles.css?v=' + Date.now();
+            document.head.appendChild(link);
+        })();
+    </script>
+</head>
+<body>
+    <div class="game-header">
+        <button id="home-team-button" class="team-button"><img class="team-button__logo" alt=""></button>
+        <h1>Basketball Spy</h1>
+        <button id="away-team-button" class="team-button"><img class="team-button__logo" alt=""></button>
+    </div>
+
+    <div class="teams-container">
+        <div class="team home-team active" data-team-id="0">
+            <div class="player-list">
+                <ul class="in-game"></ul>
+                <ul class="on-bench"></ul>
+            </div>
+            <div class="player-edit"></div>
+        </div>
+        <div class="team away-team" data-team-id="1">
+            <div class="player-list">
+                <ul class="in-game"></ul>
+                <ul class="on-bench"></ul>
+            </div>
+            <div class="player-edit"></div>
+        </div>
+
+        <div class="player-edit-template">
+            <div class="player-card player-card--edit">
+                <img class="player-card__headshot" alt="Player photo" src="">
+                <div class="player-card__info">
+                    <div class="player-card__name"></div>
+                    <div class="player-card__details"></div>
+                </div>
+                <button class="player-card__button" aria-label="Close"></button>
+            </div>
+            <div class="report-editor-placeholder">Report editor goes here...</div>
+        </div>
+    </div>
+    
+    <!-- Player card template -->
+    <template id="player-card-template">
+        <li class="player-card">
+            <img class="player-card__headshot" alt="" src="">
+            <div class="player-card__info">
+                <div class="player-card__name"></div>
+                <div class="player-card__details"></div>
+            </div>
+            <button class="player-card__button" aria-label="Move player"></button>
+        </li>
+    </template>
+    
+    <!-- Load data.js first, then scripts.js -->
+    <script>
+        (function() {
+            var dataScript = document.createElement('script');
+            dataScript.src = 'data.js?v=' + Date.now();
+            dataScript.onload = function() {
+                var scriptsScript = document.createElement('script');
+                scriptsScript.src = 'scripts.js?v=' + Date.now();
+                document.body.appendChild(scriptsScript);
+            };
+            document.body.appendChild(dataScript);
+        })();
+    </script>
+</body>
+</html>
+
