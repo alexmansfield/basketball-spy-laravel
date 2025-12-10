@@ -3708,5 +3708,12 @@
     "first_name": "Zion",
     "last_name": "Williamson",
     "headshot_url": "https://cdn.nba.com/headshots/nba/latest/1040x760/1629627.png"
+  },
+  {
+    "player_id": 1631224,
+    "full_name": "Drew Timme",
+    "first_name": "Drew",
+    "last_name": "Timme",
+    "headshot_url": "https://cdn.nba.com/headshots/nba/latest/1040x760/1631224.png"
   }
 ]
