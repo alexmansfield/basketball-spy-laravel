@@ -15,14 +15,15 @@ class SyncPlayersFromBallDontLie implements ShouldQueue
 
     public int $tries = 3;
     public int $backoff = 120;
-    public int $timeout = 600; // 10 minutes - only active players now
+    public int $timeout = 900; // 15 minutes - paginating all players with rate limits
 
     /**
      * Execute the job.
+     * Cross-references BallDontLie players with NBA Stats API to determine active status.
      */
     public function handle(BallDontLieService $api): void
     {
-        Log::info('SyncPlayersFromBallDontLie: Starting active player sync');
+        Log::info('SyncPlayersFromBallDontLie: Starting player sync with NBA Stats cross-reference');
 
         // Build team lookup by BallDontLie ID
         $teamsByBdlId = Team::whereNotNull('balldontlie_id')
@@ -34,90 +35,116 @@ class SyncPlayersFromBallDontLie implements ShouldQueue
             return;
         }
 
-        // Get only active players (single API call, ~500 players)
-        $activePlayers = $api->getActivePlayers();
+        // Step 1: Get active player names from NBA Stats API (free)
+        $activePlayerNames = $api->getActivePlayerNamesFromNBAStats();
 
-        if (empty($activePlayers)) {
-            Log::warning('SyncPlayersFromBallDontLie: No active players returned from API');
+        if (empty($activePlayerNames)) {
+            Log::error('SyncPlayersFromBallDontLie: Failed to fetch active players from NBA Stats API');
             return;
         }
 
-        Log::info('SyncPlayersFromBallDontLie: Fetched active players', [
-            'count' => count($activePlayers),
+        Log::info('SyncPlayersFromBallDontLie: Fetched active players from NBA Stats API', [
+            'count' => count($activePlayerNames),
         ]);
 
-        // Reset all players to inactive first
+        // Step 2: Reset all players to inactive
         Player::query()->update(['is_active' => false]);
 
-        $stats = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'total' => 0];
+        // Step 3: Iterate through BallDontLie players and cross-reference
+        $stats = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'active_matched' => 0, 'pages' => 0];
+        $cursor = null;
 
-        foreach ($activePlayers as $playerData) {
-            $stats['total']++;
-            $bdlId = $playerData['id'] ?? null;
+        do {
+            $response = $api->getPlayers($cursor, 100);
+            $players = $response['data'] ?? [];
+            $cursor = $response['meta']['next_cursor'] ?? null;
+            $stats['pages']++;
 
-            if (!$bdlId) {
-                $stats['skipped']++;
-                continue;
+            foreach ($players as $playerData) {
+                $bdlId = $playerData['id'] ?? null;
+                if (!$bdlId) {
+                    $stats['skipped']++;
+                    continue;
+                }
+
+                $teamBdlId = $playerData['team']['id'] ?? null;
+                $team = $teamBdlId ? $teamsByBdlId->get($teamBdlId) : null;
+
+                if (!$team) {
+                    $stats['skipped']++;
+                    continue;
+                }
+
+                // Build player name and check if active via NBA Stats API
+                $fullName = trim(($playerData['first_name'] ?? '') . ' ' . ($playerData['last_name'] ?? ''));
+                $normalizedName = $this->normalizeName($fullName);
+                $isActive = isset($activePlayerNames[$normalizedName]);
+
+                // Get NBA player ID if matched
+                $nbaPlayerId = $isActive ? $activePlayerNames[$normalizedName] : null;
+
+                $height = $playerData['height'] ?? null;
+                $weight = isset($playerData['weight']) ? $playerData['weight'] . ' lbs' : null;
+
+                $playerAttributes = [
+                    'balldontlie_id' => $bdlId,
+                    'team_id' => $team->id,
+                    'name' => $fullName,
+                    'jersey' => $playerData['jersey_number'] ?? '',
+                    'position' => $playerData['position'] ?? '',
+                    'height' => $height,
+                    'weight' => $weight,
+                    'is_active' => $isActive,
+                    'extra_attributes' => [
+                        'first_name' => $playerData['first_name'] ?? null,
+                        'last_name' => $playerData['last_name'] ?? null,
+                        'college' => $playerData['college'] ?? null,
+                        'country' => $playerData['country'] ?? null,
+                        'draft_year' => $playerData['draft_year'] ?? null,
+                        'draft_round' => $playerData['draft_round'] ?? null,
+                        'draft_number' => $playerData['draft_number'] ?? null,
+                    ],
+                ];
+
+                // Also set NBA player ID if we found a match
+                if ($nbaPlayerId) {
+                    $playerAttributes['nba_player_id'] = $nbaPlayerId;
+                }
+
+                $player = Player::where('balldontlie_id', $bdlId)->first();
+
+                if ($player) {
+                    $player->update($playerAttributes);
+                    $stats['updated']++;
+                } else {
+                    Player::create($playerAttributes);
+                    $stats['created']++;
+                }
+
+                if ($isActive) {
+                    $stats['active_matched']++;
+                }
             }
 
-            // Get team from player data
-            $teamBdlId = $playerData['team']['id'] ?? null;
-            $team = $teamBdlId ? $teamsByBdlId->get($teamBdlId) : null;
-
-            if (!$team) {
-                // Player has no valid team assignment
-                Log::debug('SyncPlayersFromBallDontLie: Player has no valid team', [
-                    'player_id' => $bdlId,
-                    'player_name' => ($playerData['first_name'] ?? '') . ' ' . ($playerData['last_name'] ?? ''),
-                    'team_bdl_id' => $teamBdlId,
-                ]);
-                $stats['skipped']++;
-                continue;
+            // Log progress every 10 pages
+            if ($stats['pages'] % 10 === 0) {
+                Log::info('SyncPlayersFromBallDontLie: Progress', $stats);
             }
-
-            // Format height from feet/inches
-            $height = null;
-            if (isset($playerData['height'])) {
-                $height = $playerData['height']; // API returns as string like "6-10"
-            }
-
-            // Format weight
-            $weight = isset($playerData['weight']) ? $playerData['weight'] . ' lbs' : null;
-
-            $playerAttributes = [
-                'balldontlie_id' => $bdlId,
-                'team_id' => $team->id,
-                'name' => trim(($playerData['first_name'] ?? '') . ' ' . ($playerData['last_name'] ?? '')),
-                'jersey' => $playerData['jersey_number'] ?? '',
-                'position' => $playerData['position'] ?? '',
-                'height' => $height,
-                'weight' => $weight,
-                'is_active' => true,
-                'extra_attributes' => [
-                    'first_name' => $playerData['first_name'] ?? null,
-                    'last_name' => $playerData['last_name'] ?? null,
-                    'college' => $playerData['college'] ?? null,
-                    'country' => $playerData['country'] ?? null,
-                    'draft_year' => $playerData['draft_year'] ?? null,
-                    'draft_round' => $playerData['draft_round'] ?? null,
-                    'draft_number' => $playerData['draft_number'] ?? null,
-                ],
-            ];
-
-            // Find existing player by BallDontLie ID
-            $player = Player::where('balldontlie_id', $bdlId)->first();
-
-            if ($player) {
-                // Update existing player - this will fix wrong team assignments!
-                $player->update($playerAttributes);
-                $stats['updated']++;
-            } else {
-                // Create new player
-                Player::create($playerAttributes);
-                $stats['created']++;
-            }
-        }
+        } while ($cursor !== null);
 
         Log::info('SyncPlayersFromBallDontLie: Sync completed', $stats);
+    }
+
+    /**
+     * Normalize a player name for matching.
+     */
+    protected function normalizeName(string $name): string
+    {
+        $name = strtolower($name);
+        $name = preg_replace('/\s+(jr\.?|sr\.?|ii|iii|iv)$/i', '', $name);
+        $name = str_replace('.', '', $name);
+        $name = preg_replace('/\s+/', ' ', $name);
+        $name = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $name) ?: $name;
+        return trim($name);
     }
 }

@@ -24,8 +24,8 @@ class BallDontLieService
 
     public function __construct()
     {
-        $this->baseUrl = config('services.balldontlie.base_url', 'https://api.balldontlie.io/v1');
-        $this->apiKey = config('services.balldontlie.key', '');
+        $this->baseUrl = config('services.balldontlie.base_url') ?? 'https://api.balldontlie.io/v1';
+        $this->apiKey = config('services.balldontlie.key') ?? '';
     }
 
     /**
@@ -172,11 +172,100 @@ class BallDontLieService
 
     /**
      * Get active players (no pagination - returns all at once).
+     * NOTE: This endpoint requires a paid tier subscription.
      */
     public function getActivePlayers(): array
     {
         $response = $this->request('players/active');
         return $response['data'] ?? [];
+    }
+
+    /**
+     * Get current season active player names from NBA Stats API (free).
+     * Returns normalized name => NBA player ID mapping.
+     */
+    public function getActivePlayerNamesFromNBAStats(): array
+    {
+        $season = $this->getCurrentNBASeason();
+
+        try {
+            $response = Http::timeout(30)
+                ->withHeaders([
+                    'Referer' => 'https://www.nba.com/',
+                    'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+                    'Accept' => 'application/json',
+                ])
+                ->get('https://stats.nba.com/stats/commonallplayers', [
+                    'LeagueID' => '00',
+                    'Season' => $season,
+                    'IsOnlyCurrentSeason' => '1',
+                ]);
+
+            if (!$response->successful()) {
+                Log::error('NBA Stats API request failed', [
+                    'status' => $response->status(),
+                ]);
+                return [];
+            }
+
+            $data = $response->json();
+            $resultSet = $data['resultSets'][0] ?? [];
+            $headers = $resultSet['headers'] ?? [];
+            $rows = $resultSet['rowSet'] ?? [];
+
+            $personIdIdx = array_search('PERSON_ID', $headers);
+            $displayNameIdx = array_search('DISPLAY_FIRST_LAST', $headers);
+
+            if ($personIdIdx === false || $displayNameIdx === false) {
+                Log::error('NBA Stats API: Unexpected response format');
+                return [];
+            }
+
+            $players = [];
+            foreach ($rows as $row) {
+                $normalizedName = $this->normalizeName($row[$displayNameIdx]);
+                $players[$normalizedName] = $row[$personIdIdx];
+            }
+
+            Log::info('NBA Stats API: Fetched active players', ['count' => count($players)]);
+            return $players;
+
+        } catch (\Exception $e) {
+            Log::error('NBA Stats API: Exception', ['error' => $e->getMessage()]);
+            return [];
+        }
+    }
+
+    /**
+     * Normalize a player name for matching.
+     */
+    protected function normalizeName(string $name): string
+    {
+        $name = strtolower($name);
+        // Remove suffixes like Jr., Sr., II, III, IV
+        $name = preg_replace('/\s+(jr\.?|sr\.?|ii|iii|iv)$/i', '', $name);
+        $name = str_replace('.', '', $name);
+        $name = preg_replace('/\s+/', ' ', $name);
+        // Transliterate accented characters
+        $name = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $name) ?: $name;
+        return trim($name);
+    }
+
+    /**
+     * Get the current NBA season string (e.g., "2024-25").
+     */
+    protected function getCurrentNBASeason(): string
+    {
+        $year = (int) date('Y');
+        $month = (int) date('n');
+
+        // NBA season starts in October, so before October use previous year
+        if ($month < 10) {
+            $year--;
+        }
+
+        $nextYear = substr((string) ($year + 1), -2);
+        return "{$year}-{$nextYear}";
     }
 
     /**
