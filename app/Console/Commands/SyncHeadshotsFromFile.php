@@ -18,10 +18,12 @@ class SyncHeadshotsFromFile extends Command
      */
     protected array $nameAliases = [
         'nicolas claxton' => 'nic claxton',
-        'garrison mathews' => 'garrison mathews', // Check actual spelling
         'cameron johnson' => 'cam johnson',
         'kenneth lofton' => 'kenneth lofton jr',
-        'ej liddell' => 'e.j. liddell',
+        'ej liddell' => 'ej liddell',
+        'nigel hayes' => 'nigel hayes-davis',
+        'bones hyland' => 'nahshon hyland',
+        'nahshon hyland' => 'nahshon hyland',
     ];
 
     public function handle(): int
@@ -161,14 +163,31 @@ class SyncHeadshotsFromFile extends Command
 
         // Manual transliteration map for common characters
         $translitMap = [
+            // Serbian/Croatian
             'ć' => 'c', 'Ć' => 'C',
             'č' => 'c', 'Č' => 'C',
             'ž' => 'z', 'Ž' => 'Z',
             'š' => 's', 'Š' => 'S',
             'đ' => 'd', 'Đ' => 'D',
+            // Latvian (Porzingis)
+            'ņ' => 'n', 'Ņ' => 'N',
+            'ģ' => 'g', 'Ģ' => 'G',
+            'ķ' => 'k', 'Ķ' => 'K',
+            'ļ' => 'l', 'Ļ' => 'L',
+            // Lithuanian (Valanciunas)
+            'ū' => 'u', 'Ū' => 'U',
+            'ą' => 'a', 'Ą' => 'A',
+            'ę' => 'e', 'Ę' => 'E',
+            'ė' => 'e', 'Ė' => 'E',
+            'į' => 'i', 'Į' => 'I',
+            'ų' => 'u', 'Ų' => 'U',
+            // Spanish
             'ñ' => 'n', 'Ñ' => 'N',
+            // German/Nordic
             'ö' => 'o', 'Ö' => 'O',
             'ü' => 'u', 'Ü' => 'U',
+            'ä' => 'a', 'Ä' => 'A',
+            // French/Portuguese
             'é' => 'e', 'É' => 'E',
             'è' => 'e', 'È' => 'E',
             'ê' => 'e', 'Ê' => 'E',
@@ -176,7 +195,6 @@ class SyncHeadshotsFromFile extends Command
             'à' => 'a', 'À' => 'A',
             'á' => 'a', 'Á' => 'A',
             'â' => 'a', 'Â' => 'A',
-            'ä' => 'a', 'Ä' => 'A',
             'í' => 'i', 'Í' => 'I',
             'ì' => 'i', 'Ì' => 'I',
             'î' => 'i', 'Î' => 'I',
@@ -189,6 +207,7 @@ class SyncHeadshotsFromFile extends Command
             'û' => 'u', 'Û' => 'U',
             'ý' => 'y', 'Ý' => 'Y',
             'ÿ' => 'y', 'Ÿ' => 'Y',
+            // Typography
             "\u{2018}" => "'", "\u{2019}" => "'",
             "\u{2013}" => '-', "\u{2014}" => '-',
         ];
