@@ -38,7 +38,7 @@ class SyncPlayers extends Command
 
         // Get active players from BallDontLie (requires ALL-STAR tier - $9.99/month)
         $this->info('Fetching active players from BallDontLie API...');
-        $activePlayers = $api->getActivePlayers();
+        $activePlayers = $api->getAllActivePlayers();
 
         if (empty($activePlayers)) {
             $this->error('No active players returned from API.');

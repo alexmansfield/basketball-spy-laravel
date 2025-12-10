@@ -171,13 +171,40 @@ class BallDontLieService
     }
 
     /**
-     * Get active players (no pagination - returns all at once).
+     * Get active players with pagination support.
+     * NOTE: This endpoint requires a paid tier subscription.
+     *
+     * @param int|null $cursor Pagination cursor
+     * @param int $perPage Results per page (max 100)
+     */
+    public function getActivePlayers(?int $cursor = null, int $perPage = 100): array
+    {
+        $params = ['per_page' => min($perPage, 100)];
+
+        if ($cursor) {
+            $params['cursor'] = $cursor;
+        }
+
+        return $this->request('players/active', $params) ?? ['data' => [], 'meta' => []];
+    }
+
+    /**
+     * Get all active players (handles pagination automatically).
      * NOTE: This endpoint requires a paid tier subscription.
      */
-    public function getActivePlayers(): array
+    public function getAllActivePlayers(): array
     {
-        $response = $this->request('players/active');
-        return $response['data'] ?? [];
+        $allPlayers = [];
+        $cursor = null;
+
+        do {
+            $response = $this->getActivePlayers($cursor, 100);
+            $players = $response['data'] ?? [];
+            $allPlayers = array_merge($allPlayers, $players);
+            $cursor = $response['meta']['next_cursor'] ?? null;
+        } while ($cursor !== null);
+
+        return $allPlayers;
     }
 
     /**

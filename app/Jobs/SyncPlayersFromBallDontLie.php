@@ -36,7 +36,7 @@ class SyncPlayersFromBallDontLie implements ShouldQueue
         }
 
         // Get active players from BallDontLie (requires ALL-STAR tier)
-        $activePlayers = $api->getActivePlayers();
+        $activePlayers = $api->getAllActivePlayers();
 
         if (empty($activePlayers)) {
             Log::error('SyncPlayersFromBallDontLie: No active players returned. Check API subscription tier.');
