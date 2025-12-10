@@ -77,14 +77,19 @@ class SyncPlayers extends Command
             $height = $playerData['height'] ?? null;
             $weight = isset($playerData['weight']) ? $playerData['weight'] . ' lbs' : null;
 
+            // BallDontLie ID is the same as NBA player ID - use it for headshots
+            $headshotUrl = "https://cdn.nba.com/headshots/nba/latest/1040x760/{$bdlId}.png";
+
             $playerAttributes = [
                 'balldontlie_id' => $bdlId,
+                'nba_player_id' => $bdlId, // BallDontLie ID = NBA player ID
                 'team_id' => $team->id,
                 'name' => trim(($playerData['first_name'] ?? '') . ' ' . ($playerData['last_name'] ?? '')),
                 'jersey' => $playerData['jersey_number'] ?? '',
                 'position' => $playerData['position'] ?? '',
                 'height' => $height,
                 'weight' => $weight,
+                'headshot_url' => $headshotUrl,
                 'is_active' => true,
                 'extra_attributes' => [
                     'first_name' => $playerData['first_name'] ?? null,
