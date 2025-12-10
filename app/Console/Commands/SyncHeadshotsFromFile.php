@@ -114,6 +114,7 @@ class SyncHeadshotsFromFile extends Command
 
             if ($data) {
                 $player->update([
+                    'name' => $data['original_name'], // Use proper accented name from NBA
                     'nba_player_id' => $data['nba_player_id'],
                     'headshot_url' => $data['headshot_url'],
                 ]);
