@@ -68,7 +68,7 @@ class SyncPlayersFromBallDontLie implements ShouldQueue
                 continue;
             }
 
-            $height = $playerData['height'] ?? null;
+            $height = $this->formatHeight($playerData['height'] ?? null);
             $weight = isset($playerData['weight']) ? $playerData['weight'] . ' lbs' : null;
 
             // BallDontLie ID is the same as NBA player ID - use it for headshots
@@ -108,5 +108,22 @@ class SyncPlayersFromBallDontLie implements ShouldQueue
         }
 
         Log::info('SyncPlayersFromBallDontLie: Sync completed', $stats);
+    }
+
+    /**
+     * Format height from "6-8" to "6'8\"" format.
+     */
+    protected function formatHeight(?string $height): ?string
+    {
+        if (!$height) {
+            return null;
+        }
+
+        // Convert "6-8" to "6'8\""
+        if (preg_match('/^(\d+)-(\d+)$/', $height, $matches)) {
+            return $matches[1] . "'" . $matches[2] . '"';
+        }
+
+        return $height;
     }
 }
