@@ -26,30 +26,10 @@ class SyncGamesLLM extends Command
         $this->info('✓ OPENAI_API_KEY configured');
         $this->newLine();
 
-        // Single date mode
-        if ($specificDate = $this->option('date')) {
-            return $this->syncDate($service, $specificDate);
-        }
+        // The saved prompt returns 7 days at once, so we only need one API call
+        $this->info('Fetching NBA schedule (next 7 days)...');
 
-        // Multi-day mode
-        $days = (int) $this->option('days');
-        $this->info("Syncing games for today + next {$days} days...");
-        $this->newLine();
-
-        $totalStored = 0;
-
-        for ($i = 0; $i <= $days; $i++) {
-            $date = now()->addDays($i)->format('Y-m-d');
-            $result = $this->syncDate($service, $date, false);
-            if ($result > 0) {
-                $totalStored += $result;
-            }
-        }
-
-        $this->newLine();
-        $this->info("✓ Total games synced: {$totalStored}");
-
-        return Command::SUCCESS;
+        return $this->syncDate($service, now()->format('Y-m-d'));
     }
 
     protected function syncDate(NBAScheduleService $service, string $date, bool $verbose = true): int

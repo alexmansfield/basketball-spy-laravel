@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 class Game extends Model
 {
@@ -59,10 +60,16 @@ class Game extends Model
 
     /**
      * Scope a query to only include games for a specific date.
+     * Games are stored in UTC but we query by Eastern Time date (NBA standard).
      */
     public function scopeForDate($query, string $date)
     {
-        return $query->whereDate('scheduled_at', $date);
+        // Convert ET date to UTC range
+        // ET day starts at 05:00 UTC (or 04:00 during DST)
+        $etStart = Carbon::parse($date, 'America/New_York')->startOfDay()->utc();
+        $etEnd = Carbon::parse($date, 'America/New_York')->endOfDay()->utc();
+
+        return $query->whereBetween('scheduled_at', [$etStart, $etEnd]);
     }
 
     /**
@@ -70,6 +77,17 @@ class Game extends Model
      */
     public function scopeToday($query)
     {
-        return $query->whereDate('scheduled_at', now()->toDateString());
+        return $query->forDate(now('America/New_York')->toDateString());
+    }
+
+    /**
+     * Scope for upcoming games (not finished, from now onwards).
+     */
+    public function scopeUpcoming($query)
+    {
+        return $query
+            ->whereNotIn('status', ['final', 'closed', 'cancelled', 'postponed'])
+            ->where('scheduled_at', '>=', now()->subHours(4)) // Include recently started games
+            ->orderBy('scheduled_at');
     }
 }

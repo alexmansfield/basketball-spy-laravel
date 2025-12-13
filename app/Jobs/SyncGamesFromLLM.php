@@ -25,38 +25,27 @@ class SyncGamesFromLLM implements ShouldQueue
 
     public function handle(NBAScheduleService $service): void
     {
-        Log::info('SyncGamesFromLLM: Starting', ['days' => $this->days]);
+        Log::info('SyncGamesFromLLM: Starting (saved prompt returns 7 days)');
 
-        $stored = 0;
-        $errors = 0;
+        try {
+            // Saved prompt returns 7 days at once - only need one API call
+            $games = $service->fetchGamesForDate(now()->format('Y-m-d'));
 
-        // Sync today + next N days
-        for ($i = 0; $i <= $this->days; $i++) {
-            $date = now()->addDays($i)->format('Y-m-d');
+            if (!empty($games)) {
+                $stored = $service->storeGames($games);
 
-            try {
-                $games = $service->fetchGamesForDate($date);
-
-                if (!empty($games)) {
-                    $count = $service->storeGames($games);
-                    $stored += $count;
+                // Clear cache for all dates in the response
+                $dates = collect($games)->pluck('scheduled_at')->map(fn($dt) => $dt->format('Y-m-d'))->unique();
+                foreach ($dates as $date) {
                     Cache::forget("games:date:{$date}");
-                    Log::info("SyncGamesFromLLM: Stored {$count} games for {$date}");
-                } else {
-                    Log::info("SyncGamesFromLLM: No games for {$date}");
                 }
-            } catch (\Exception $e) {
-                $errors++;
-                Log::error("SyncGamesFromLLM: Failed for {$date}", [
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
 
-        Log::info('SyncGamesFromLLM: Completed', [
-            'days_synced' => $this->days + 1,
-            'games_stored' => $stored,
-            'errors' => $errors,
-        ]);
+                Log::info('SyncGamesFromLLM: Completed', ['games_stored' => $stored]);
+            } else {
+                Log::warning('SyncGamesFromLLM: No games returned');
+            }
+        } catch (\Exception $e) {
+            Log::error('SyncGamesFromLLM: Failed', ['error' => $e->getMessage()]);
+        }
     }
 }

@@ -36,62 +36,49 @@ class GamesController extends Controller
      *
      * GET /api/games/upcoming
      *
-     * Returns games that haven't finished yet. If no upcoming games today,
-     * returns tomorrow's games. Sorted by scheduled time.
+     * Returns the next batch of games that haven't finished yet,
+     * regardless of date. Sorted by scheduled time.
      */
     public function upcoming(Request $request): JsonResponse
     {
-        $now = now();
-        $today = $now->toDateString();
-        $tomorrow = $now->copy()->addDay()->toDateString();
+        $nowET = now('America/New_York');
+        $todayET = $nowET->toDateString();
 
-        // First, try to get today's games that aren't finished
-        $todayGames = Game::with(['homeTeam', 'awayTeam'])
-            ->forDate($today)
-            ->whereNotIn('status', ['final', 'closed', 'cancelled', 'postponed'])
-            ->orderBy('scheduled_at')
+        // Get upcoming games (not finished, from now onwards)
+        $games = Game::with(['homeTeam', 'awayTeam'])
+            ->upcoming()
+            ->limit(15)
             ->get();
 
         Log::info('GamesController: Upcoming games query', [
-            'today' => $today,
-            'today_upcoming_count' => $todayGames->count(),
+            'today_et' => $todayET,
+            'upcoming_count' => $games->count(),
         ]);
 
-        // If we have upcoming games today, return them
-        if ($todayGames->isNotEmpty()) {
-            return response()->json([
-                'games' => $todayGames->map(fn($game) => $this->formatGame($game))->toArray(),
-                'date' => $today,
-                'showing' => 'today',
-            ]);
+        // If no upcoming games, the sync may not have run yet
+        if ($games->isEmpty()) {
+            Log::warning('GamesController: No upcoming games found in DB');
         }
 
-        // No upcoming games today - check if there were any games today at all
-        $todayAllGames = Game::forDate($today)->count();
+        // Determine what we're showing based on the first game's date
+        $showing = 'upcoming';
+        $date = $todayET;
 
-        // If there were games today (all finished), or no games today, show tomorrow
-        $tomorrowGames = Game::with(['homeTeam', 'awayTeam'])
-            ->forDate($tomorrow)
-            ->orderBy('scheduled_at')
-            ->get();
+        if ($games->isNotEmpty()) {
+            $firstGameDate = $games->first()->scheduled_at->setTimezone('America/New_York')->toDateString();
+            $date = $firstGameDate;
 
-        Log::info('GamesController: Falling back to tomorrow', [
-            'today_total_games' => $todayAllGames,
-            'tomorrow_games_count' => $tomorrowGames->count(),
-        ]);
-
-        // If no games tomorrow either, try fetching from API for tomorrow
-        if ($tomorrowGames->isEmpty()) {
-            $tomorrowGames = $this->fetchGamesFromApi($tomorrow);
-            if ($tomorrowGames->isEmpty()) {
-                $tomorrowGames = $this->fetchGamesFromLLM($tomorrow);
+            if ($firstGameDate === $todayET) {
+                $showing = 'today';
+            } elseif ($firstGameDate === $nowET->copy()->addDay()->toDateString()) {
+                $showing = 'tomorrow';
             }
         }
 
         return response()->json([
-            'games' => $tomorrowGames->map(fn($game) => $this->formatGame($game))->toArray(),
-            'date' => $tomorrow,
-            'showing' => $todayAllGames > 0 ? 'tomorrow_after_today_finished' : 'tomorrow_no_games_today',
+            'games' => $games->map(fn($game) => $this->formatGame($game))->toArray(),
+            'date' => $date,
+            'showing' => $showing,
         ]);
     }
 
