@@ -10,9 +10,11 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Sync games every 2 hours (today + next 3 days via LLM)
-Schedule::job(new SyncGamesFromLLM(3))
-    ->everyTwoHours()
+// Sync games twice weekly (Mon & Thu at 6 AM ET) - covers next 7 days
+Schedule::job(new SyncGamesFromLLM(7))
+    ->days([1, 4]) // Monday, Thursday
+    ->at('06:00')
+    ->timezone('America/New_York')
     ->withoutOverlapping()
     ->onOneServer();
 
