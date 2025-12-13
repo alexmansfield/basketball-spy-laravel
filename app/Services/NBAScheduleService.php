@@ -190,6 +190,7 @@ class NBAScheduleService
         }
 
         if (is_array($gamesData) && !empty($gamesData)) {
+            Log::info('NBAScheduleService: Parsed JSON array', ['count' => count($gamesData)]);
             return $this->processJsonGames($gamesData, $date, $teamsByAbbr);
         }
 
@@ -204,8 +205,9 @@ class NBAScheduleService
     protected function processJsonGames(array $gamesData, string $fallbackDate, $teamsByAbbr): array
     {
         $games = [];
+        Log::info('NBAScheduleService: Processing games', ['total' => count($gamesData)]);
 
-        foreach ($gamesData as $game) {
+        foreach ($gamesData as $index => $game) {
             $homeAbbr = strtoupper($game['home_team'] ?? $game['home'] ?? '');
             $awayAbbr = strtoupper($game['away_team'] ?? $game['away'] ?? '');
 
@@ -213,7 +215,12 @@ class NBAScheduleService
             $awayTeam = $teamsByAbbr->get($awayAbbr);
 
             if (!$homeTeam || !$awayTeam) {
-                Log::warning('NBAScheduleService: Unknown team', ['home' => $homeAbbr, 'away' => $awayAbbr]);
+                Log::warning('NBAScheduleService: Unknown team', [
+                    'index' => $index,
+                    'home' => $homeAbbr,
+                    'away' => $awayAbbr,
+                    'available_teams' => $teamsByAbbr->keys()->take(10)->toArray(),
+                ]);
                 continue;
             }
 
@@ -231,6 +238,7 @@ class NBAScheduleService
             ];
         }
 
+        Log::info('NBAScheduleService: Processed games', ['successful' => count($games)]);
         return $games;
     }
 
