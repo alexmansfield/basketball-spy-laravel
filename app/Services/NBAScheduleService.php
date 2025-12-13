@@ -114,9 +114,9 @@ PROMPT;
         // Extract the text content from the response
         $content = $this->extractContent($data);
 
-        Log::info('NBAScheduleService: Extracted content', [
+        Log::info('NBAScheduleService: Raw API response', [
             'content_length' => strlen($content),
-            'content_preview' => substr($content, 0, 200),
+            'content' => $content,
         ]);
 
         if (empty($content)) {
