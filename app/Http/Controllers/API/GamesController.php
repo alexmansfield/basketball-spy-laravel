@@ -342,6 +342,8 @@ class GamesController extends Controller
      */
     private function formatGame(Game $game): array
     {
+        $timezone = $this->getTimezoneForState($game->homeTeam->arena_state);
+
         return [
             'id' => (string) $game->id,
             'homeTeam' => [
@@ -364,10 +366,33 @@ class GamesController extends Controller
                 'state' => $game->homeTeam->arena_state ?? '',
                 'latitude' => (float) ($game->homeTeam->arena_latitude ?? 0),
                 'longitude' => (float) ($game->homeTeam->arena_longitude ?? 0),
+                'timezone' => $timezone,
             ],
             'scheduledAt' => $game->scheduled_at->toISOString(),
-            'scheduleDate' => $game->scheduled_at->toDateString(),
+            'localTime' => $game->scheduled_at->setTimezone($timezone)->format('g:i A'),
+            'localDate' => $game->scheduled_at->setTimezone($timezone)->format('M j'),
             'status' => $game->status,
         ];
+    }
+
+    /**
+     * Get timezone for a US/Canada state/province.
+     */
+    private function getTimezoneForState(?string $state): string
+    {
+        return match ($state) {
+            // Pacific
+            'CA', 'WA', 'OR', 'NV' => 'America/Los_Angeles',
+            // Mountain
+            'AZ' => 'America/Phoenix', // No DST
+            'CO', 'UT' => 'America/Denver',
+            // Central
+            'TX', 'IL', 'WI', 'MN', 'OK', 'LA', 'TN' => 'America/Chicago',
+            // Eastern
+            'NY', 'MA', 'PA', 'OH', 'MI', 'IN', 'FL', 'GA', 'NC', 'DC', 'CT' => 'America/New_York',
+            // Canada
+            'ON' => 'America/Toronto',
+            default => 'America/New_York',
+        };
     }
 }
