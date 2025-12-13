@@ -56,15 +56,13 @@ class NBAScheduleService
     {
         Log::info('NBAScheduleService: Calling OpenAI Responses API with saved prompt (background mode)');
 
-        // Start background request
+        // Start background request - model/tools defined in saved prompt
         $response = Http::timeout(30)
             ->withHeaders([
                 'Authorization' => "Bearer {$apiKey}",
                 'Content-Type' => 'application/json',
             ])
             ->post('https://api.openai.com/v1/responses', [
-                'model' => 'gpt-4o-mini',
-                'tools' => [['type' => 'web_search_preview']],
                 'prompt' => [
                     'id' => 'pmpt_69389a8d44cc81938188f27bcdcf0df606e9bff2d576d7ec',
                 ],
