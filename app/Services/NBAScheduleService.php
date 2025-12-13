@@ -54,17 +54,21 @@ class NBAScheduleService
      */
     protected function fetchFromOpenAI(string $date, string $apiKey): array
     {
-        Log::info('NBAScheduleService: Calling OpenAI Responses API with saved prompt');
+        Log::info('NBAScheduleService: Calling OpenAI Responses API with saved prompt (background mode)');
 
-        $response = Http::timeout(90)
+        // Start background request
+        $response = Http::timeout(30)
             ->withHeaders([
                 'Authorization' => "Bearer {$apiKey}",
                 'Content-Type' => 'application/json',
             ])
             ->post('https://api.openai.com/v1/responses', [
+                'model' => 'gpt-4o-mini',
+                'tools' => [['type' => 'web_search_preview']],
                 'prompt' => [
                     'id' => 'pmpt_69389a8d44cc81938188f27bcdcf0df606e9bff2d576d7ec',
                 ],
+                'background' => true,
             ]);
 
         if (!$response->successful()) {
@@ -76,33 +80,72 @@ class NBAScheduleService
         }
 
         $data = $response->json();
+        $responseId = $data['id'] ?? null;
+        $status = $data['status'] ?? null;
 
-        Log::info('NBAScheduleService: OpenAI response received', [
-            'has_choices' => isset($data['choices']),
+        Log::info('NBAScheduleService: Background request started', [
+            'response_id' => $responseId,
+            'status' => $status,
         ]);
 
-        // Extract the text content from the response
-        $content = $this->extractContent($data);
-
-        Log::info('NBAScheduleService: Raw API response', [
-            'content_length' => strlen($content),
-            'content' => $content,
-        ]);
-
-        if (empty($content)) {
-            Log::warning('NBAScheduleService: Empty response from OpenAI');
+        if (!$responseId) {
+            Log::error('NBAScheduleService: No response ID returned');
             return [];
         }
 
-        // Parse the JSON response
-        $games = $this->parseGamesJson($content, $date);
+        // Poll for completion (max 5 minutes)
+        $maxAttempts = 60;
+        $pollInterval = 5; // seconds
 
-        Log::info('NBAScheduleService: Fetched games from OpenAI', [
-            'date' => $date,
-            'games_count' => count($games),
-        ]);
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            sleep($pollInterval);
 
-        return $games;
+            $pollResponse = Http::timeout(30)
+                ->withHeaders([
+                    'Authorization' => "Bearer {$apiKey}",
+                ])
+                ->get("https://api.openai.com/v1/responses/{$responseId}");
+
+            if (!$pollResponse->successful()) {
+                Log::warning('NBAScheduleService: Poll request failed', [
+                    'attempt' => $attempt,
+                    'status' => $pollResponse->status(),
+                ]);
+                continue;
+            }
+
+            $pollData = $pollResponse->json();
+            $status = $pollData['status'] ?? 'unknown';
+
+            Log::info('NBAScheduleService: Poll status', [
+                'attempt' => $attempt,
+                'status' => $status,
+            ]);
+
+            if ($status === 'completed') {
+                $content = $this->extractContent($pollData);
+
+                Log::info('NBAScheduleService: Raw API response', [
+                    'content_length' => strlen($content),
+                    'content' => $content,
+                ]);
+
+                if (empty($content)) {
+                    Log::warning('NBAScheduleService: Empty response from OpenAI');
+                    return [];
+                }
+
+                return $this->parseGamesJson($content, $date);
+            }
+
+            if ($status === 'failed' || $status === 'cancelled') {
+                Log::error('NBAScheduleService: Request failed', ['status' => $status]);
+                return [];
+            }
+        }
+
+        Log::error('NBAScheduleService: Polling timed out after 5 minutes');
+        return [];
     }
 
     /**
@@ -160,12 +203,11 @@ class NBAScheduleService
     /**
      * Process JSON games array.
      */
-    protected function processJsonGames(array $gamesData, string $date, $teamsByAbbr): array
+    protected function processJsonGames(array $gamesData, string $fallbackDate, $teamsByAbbr): array
     {
         $games = [];
 
         foreach ($gamesData as $game) {
-            // Support both formats: {home_team, away_team} and {home, away}
             $homeAbbr = strtoupper($game['home_team'] ?? $game['home'] ?? '');
             $awayAbbr = strtoupper($game['away_team'] ?? $game['away'] ?? '');
 
@@ -177,15 +219,17 @@ class NBAScheduleService
                 continue;
             }
 
+            // Use date from game object if available, otherwise fallback
+            $gameDate = $game['date'] ?? $fallbackDate;
             $timeStr = $game['scheduled_time'] ?? $game['time'] ?? '7:00 PM ET';
-            $scheduledAt = $this->parseScheduledTime($date, $timeStr, null);
+            $scheduledAt = $this->parseScheduledTime($gameDate, $timeStr, null);
 
             $games[] = [
                 'home_team_id' => $homeTeam->id,
                 'away_team_id' => $awayTeam->id,
                 'scheduled_at' => $scheduledAt,
-                'arena' => $homeTeam->arena_name ?? "{$homeTeam->nickname} Arena",
-                'external_id' => "llm-{$homeAbbr}-{$awayAbbr}-{$date}",
+                'arena' => $game['arena'] ?? $homeTeam->arena_name ?? "{$homeTeam->nickname} Arena",
+                'external_id' => "llm-{$homeAbbr}-{$awayAbbr}-{$gameDate}",
             ];
         }
 
