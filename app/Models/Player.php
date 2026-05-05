@@ -3,9 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Player extends Model
 {
@@ -49,9 +50,10 @@ class Player extends Model
      */
     public function getAgeAttribute(): ?int
     {
-        if (!$this->birthdate) {
+        if (! $this->birthdate) {
             return null;
         }
+
         return $this->birthdate->age;
     }
 
@@ -69,5 +71,10 @@ class Player extends Model
     public function reports(): HasMany
     {
         return $this->hasMany(Report::class);
+    }
+
+    public function externalIds(): MorphMany
+    {
+        return $this->morphMany(ExternalId::class, 'entity', 'entity_type', 'entity_id');
     }
 }

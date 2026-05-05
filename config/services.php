@@ -52,4 +52,13 @@ return [
         'base_url' => 'https://api.balldontlie.io/v1',
     ],
 
+    'sportradar' => [
+        'key' => env('SPORTRADAR_API_KEY'),
+        'access_level' => env('SPORTRADAR_ACCESS_LEVEL', 'trial'),
+        'language' => env('SPORTRADAR_LANGUAGE', 'en'),
+        'timeout' => env('SPORTRADAR_TIMEOUT', 30),
+        'max_retries' => env('SPORTRADAR_MAX_RETRIES', 4),
+        'retry_sleep_ms' => env('SPORTRADAR_RETRY_SLEEP_MS', 1200),
+    ],
+
 ];
