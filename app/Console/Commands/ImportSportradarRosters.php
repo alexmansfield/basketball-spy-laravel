@@ -587,7 +587,7 @@ class ImportSportradarRosters extends Command
     protected function leagueAliases(string $league): array
     {
         return match ($league) {
-            SportradarBasketballService::LEAGUE_GLEAGUE => ['G League', 'NBA G League', 'G-League', 'NBAGL', 'NBDL'],
+            SportradarBasketballService::LEAGUE_GLEAGUE => ['G League', 'NBA G League', 'G-League', 'NBAGL', 'NBDL', 'Foreign'],
             SportradarBasketballService::LEAGUE_NCAAMB => ['NCAAB', 'NCAA', 'NCAA Basketball', 'College'],
             default => [],
         };

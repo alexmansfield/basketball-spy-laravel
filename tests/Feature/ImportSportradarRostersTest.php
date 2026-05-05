@@ -30,6 +30,14 @@ class ImportSportradarRostersTest extends TestCase
 
     public function test_it_imports_g_league_teams_and_rosters_from_sportradar(): void
     {
+        $existingTeam = Team::create([
+            'name' => 'Sioux Falls Skyforce',
+            'abbreviation' => 'SXF',
+            'location' => 'Sioux Falls',
+            'nickname' => 'Skyforce',
+            'league' => 'Foreign',
+        ]);
+
         Http::fake([
             'https://api.sportradar.us/nbdl/trial/v8/en/league/hierarchy.json' => Http::response([
                 'conferences' => [[
@@ -64,8 +72,10 @@ class ImportSportradarRostersTest extends TestCase
             ->assertExitCode(0);
 
         $team = Team::where('abbreviation', 'SXF')->firstOrFail();
+        $this->assertSame($existingTeam->id, $team->id);
         $this->assertSame('G League', $team->league);
         $this->assertSame('Sioux Falls Skyforce', $team->name);
+        $this->assertSame(1, Team::count());
 
         $player = Player::where('name', 'Kyle Prospect')->firstOrFail();
         $this->assertSame($team->id, $player->team_id);
