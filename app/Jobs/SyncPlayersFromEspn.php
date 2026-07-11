@@ -9,6 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
@@ -134,6 +135,12 @@ class SyncPlayersFromEspn implements ShouldQueue
                         ->orWhereNotNull('nba_player_id');
                 })
                 ->update(['is_active' => false]);
+        }
+
+        // Invalidate the cached roster/player API responses so the app serves
+        // the refreshed rosters immediately instead of up to an hour of stale data.
+        if ($stats['created'] + $stats['updated'] + $stats['deactivated'] > 0) {
+            Cache::flush();
         }
 
         Log::info('SyncPlayersFromEspn: Sync completed', $stats);

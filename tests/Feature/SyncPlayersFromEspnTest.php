@@ -7,6 +7,7 @@ use App\Models\Player;
 use App\Models\Team;
 use App\Services\EspnBasketballService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -149,6 +150,18 @@ class SyncPlayersFromEspnTest extends TestCase
         $this->assertSame('2005-01-15', $created->birthdate->format('Y-m-d'));
         $this->assertSame('https://a.espncdn.com/i/headshots/nba/players/full/999999.png', $created->headshot_url);
         $this->assertNull($created->nba_player_id);
+    }
+
+    public function test_it_flushes_cached_api_responses_after_changes(): void
+    {
+        $this->boston();
+        Cache::put('players:list:all', 'stale', 600);
+
+        $this->fakeEspn(['BOS' => 2], [2 => [$this->athlete(1, 'New Guy', '2000-01-01', '1')]]);
+
+        $this->sync();
+
+        $this->assertNull(Cache::get('players:list:all'));
     }
 
     public function test_it_deactivates_departed_players_but_never_custom_players(): void
