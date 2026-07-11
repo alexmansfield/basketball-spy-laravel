@@ -14,7 +14,9 @@ class SyncPlayersFromBallDontLie implements ShouldQueue
     use Queueable;
 
     public int $tries = 3;
+
     public int $backoff = 120;
+
     public int $timeout = 300; // 5 minutes - single API call for active players
 
     /**
@@ -32,6 +34,7 @@ class SyncPlayersFromBallDontLie implements ShouldQueue
 
         if ($teamsByBdlId->isEmpty()) {
             Log::warning('SyncPlayersFromBallDontLie: No teams with balldontlie_id found. Run SyncTeamsFromBallDontLie first.');
+
             return;
         }
 
@@ -40,6 +43,7 @@ class SyncPlayersFromBallDontLie implements ShouldQueue
 
         if (empty($activePlayers)) {
             Log::error('SyncPlayersFromBallDontLie: No active players returned. Check API subscription tier.');
+
             return;
         }
 
@@ -47,29 +51,33 @@ class SyncPlayersFromBallDontLie implements ShouldQueue
             'count' => count($activePlayers),
         ]);
 
-        // Reset all players to inactive
-        Player::query()->update(['is_active' => false]);
+        // Reset only NBA-team players to inactive; players in other leagues
+        // (WNBA, G League, NCAAB) are left untouched by this NBA-only sync.
+        $nbaTeamIds = $teamsByBdlId->pluck('id');
+        Player::whereIn('team_id', $nbaTeamIds)->update(['is_active' => false]);
 
         $stats = ['created' => 0, 'updated' => 0, 'skipped' => 0];
 
         foreach ($activePlayers as $playerData) {
             $bdlId = $playerData['id'] ?? null;
 
-            if (!$bdlId) {
+            if (! $bdlId) {
                 $stats['skipped']++;
+
                 continue;
             }
 
             $teamBdlId = $playerData['team']['id'] ?? null;
             $team = $teamBdlId ? $teamsByBdlId->get($teamBdlId) : null;
 
-            if (!$team) {
+            if (! $team) {
                 $stats['skipped']++;
+
                 continue;
             }
 
             $height = $this->formatHeight($playerData['height'] ?? null);
-            $weight = isset($playerData['weight']) ? $playerData['weight'] . ' lbs' : null;
+            $weight = isset($playerData['weight']) ? $playerData['weight'].' lbs' : null;
 
             // BallDontLie ID is the same as NBA player ID - use it for headshots
             $headshotUrl = "https://cdn.nba.com/headshots/nba/latest/1040x760/{$bdlId}.png";
@@ -78,7 +86,7 @@ class SyncPlayersFromBallDontLie implements ShouldQueue
                 'balldontlie_id' => $bdlId,
                 'nba_player_id' => $bdlId, // BallDontLie ID = NBA player ID
                 'team_id' => $team->id,
-                'name' => trim(($playerData['first_name'] ?? '') . ' ' . ($playerData['last_name'] ?? '')),
+                'name' => trim(($playerData['first_name'] ?? '').' '.($playerData['last_name'] ?? '')),
                 'jersey' => $playerData['jersey_number'] ?? '',
                 'position' => $playerData['position'] ?? '',
                 'height' => $height,
@@ -96,7 +104,11 @@ class SyncPlayersFromBallDontLie implements ShouldQueue
                 ],
             ];
 
-            $player = Player::where('balldontlie_id', $bdlId)->first();
+            // Match seeded players (which carry nba_player_id but may lack
+            // balldontlie_id) so they move/update in place instead of duplicating.
+            $player = Player::where('balldontlie_id', $bdlId)
+                ->orWhere('nba_player_id', $bdlId)
+                ->first();
 
             if ($player) {
                 $player->update($playerAttributes);
@@ -115,13 +127,13 @@ class SyncPlayersFromBallDontLie implements ShouldQueue
      */
     protected function formatHeight(?string $height): ?string
     {
-        if (!$height) {
+        if (! $height) {
             return null;
         }
 
         // Convert "6-8" to "6'8\""
         if (preg_match('/^(\d+)-(\d+)$/', $height, $matches)) {
-            return $matches[1] . "'" . $matches[2] . '"';
+            return $matches[1]."'".$matches[2].'"';
         }
 
         return $height;
