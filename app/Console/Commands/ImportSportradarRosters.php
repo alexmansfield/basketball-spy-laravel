@@ -21,7 +21,7 @@ class ImportSportradarRosters extends Command
      * @var string
      */
     protected $signature = 'app:import-sportradar-rosters
-                            {league=all : ncaamb, gleague, or all}
+                            {league=all : nba, ncaamb, gleague, or all}
                             {--dry-run : Fetch and report changes without writing to the database}
                             {--limit= : Limit teams per league for smoke tests}
                             {--team= : Import one team by Sportradar UUID, abbreviation, market, or name}
@@ -35,7 +35,7 @@ class ImportSportradarRosters extends Command
      *
      * @var string
      */
-    protected $description = 'Import G League and NCAA men\'s basketball rosters from Sportradar';
+    protected $description = 'Import NBA, G League, and NCAA men\'s basketball rosters from Sportradar';
 
     protected array $stats = [];
 
@@ -149,7 +149,7 @@ class ImportSportradarRosters extends Command
                     $dryRun
                 );
 
-                $this->markStalePlayersInactive($league, $team, $seenPlayerIds, $dryRun);
+                $this->markStalePlayersInactive($team, $seenPlayerIds, $dryRun);
             } catch (RuntimeException $e) {
                 $this->stats['teams_skipped']++;
                 $this->newLine();
@@ -333,6 +333,10 @@ class ImportSportradarRosters extends Command
                 ->first();
         }
 
+        if (! $player) {
+            $player = $this->findPlayerAcrossLeagues($name, $playerData['birthdate'] ?? null);
+        }
+
         $status = $player ? 'updated' : 'created';
 
         if ($dryRun) {
@@ -361,24 +365,20 @@ class ImportSportradarRosters extends Command
         return [$player, $status];
     }
 
-    protected function markStalePlayersInactive(string $league, ?Team $team, array $seenPlayerIds, bool $dryRun): void
+    protected function markStalePlayersInactive(?Team $team, array $seenPlayerIds, bool $dryRun): void
     {
         if ($this->option('keep-stale-active') || ! $team) {
+            return;
+        }
+
+        if ($seenPlayerIds === []) {
             return;
         }
 
         $query = Player::query()
             ->where('team_id', $team->id)
             ->where('is_active', true)
-            ->whereHas('externalIds', function ($query) use ($league) {
-                $query
-                    ->where('provider', SportradarBasketballService::PROVIDER)
-                    ->where('provider_league', $league);
-            });
-
-        if ($seenPlayerIds !== []) {
-            $query->whereNotIn('id', $seenPlayerIds);
-        }
+            ->whereNotIn('id', $seenPlayerIds);
 
         $count = (clone $query)->count();
         $this->stats['players_marked_inactive'] += $count;
@@ -408,6 +408,25 @@ class ImportSportradarRosters extends Command
         }
 
         return $query->find($record->entity_id);
+    }
+
+    /**
+     * Resolve a player by identity (name + birthdate) regardless of which league
+     * they were last imported under, so college->NBA and G League call-ups keep
+     * the same Player row (and its scouting history) instead of duplicating.
+     */
+    protected function findPlayerAcrossLeagues(string $name, mixed $birthdate): ?Player
+    {
+        $birthdate = is_string($birthdate) ? trim($birthdate) : '';
+
+        if ($name === '' || $birthdate === '') {
+            return null;
+        }
+
+        return Player::withTrashed()
+            ->whereRaw('LOWER(name) = ?', [Str::lower($name)])
+            ->whereDate('birthdate', $birthdate)
+            ->first();
     }
 
     protected function findExistingTeam(string $league, array $teamData): ?Team
@@ -587,6 +606,7 @@ class ImportSportradarRosters extends Command
     protected function leagueAliases(string $league): array
     {
         return match ($league) {
+            SportradarBasketballService::LEAGUE_NBA => ['NBA', 'National Basketball Association'],
             SportradarBasketballService::LEAGUE_GLEAGUE => ['G League', 'NBA G League', 'G-League', 'NBAGL', 'NBDL', 'Foreign'],
             SportradarBasketballService::LEAGUE_NCAAMB => ['NCAAB', 'NCAA', 'NCAA Basketball', 'College'],
             default => [],

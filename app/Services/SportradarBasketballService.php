@@ -11,6 +11,8 @@ class SportradarBasketballService
 {
     public const PROVIDER = 'sportradar';
 
+    public const LEAGUE_NBA = 'nba';
+
     public const LEAGUE_NCAAMB = 'ncaamb';
 
     public const LEAGUE_GLEAGUE = 'gleague';
@@ -28,6 +30,11 @@ class SportradarBasketballService
     protected int $retrySleepMs;
 
     protected array $leagues = [
+        self::LEAGUE_NBA => [
+            'display' => 'NBA',
+            'host' => 'https://api.sportradar.com',
+            'path' => 'nba',
+        ],
         self::LEAGUE_NCAAMB => [
             'display' => 'NCAAB',
             'host' => 'https://api.sportradar.com',
@@ -60,6 +67,7 @@ class SportradarBasketballService
         $normalized = Str::of($league)->lower()->replace(['-', '_', ' '], '')->toString();
 
         return match ($normalized) {
+            'nba', 'nbamb', 'nationalbasketballassociation' => self::LEAGUE_NBA,
             'ncaamb', 'ncaam', 'ncaa', 'collegebasketball' => self::LEAGUE_NCAAMB,
             'gleague', 'gleag', 'g', 'nbdl', 'nbagleague' => self::LEAGUE_GLEAGUE,
             default => throw new RuntimeException("Unsupported Sportradar league [{$league}]."),
