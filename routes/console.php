@@ -24,9 +24,10 @@ Schedule::job(new SyncPlayerMinutes)
     ->withoutOverlapping()
     ->onOneServer();
 
-// Refresh NBA rosters weekly (Mon 4:30 AM ET) so trades/call-ups stop going stale
-Schedule::command('app:import-sportradar-rosters nba')
-    ->weeklyOn(1, '04:30')
+// Refresh NBA rosters daily from ESPN (free, current within hours of a trade)
+// so roster moves like trades propagate within ~24h instead of going stale.
+Schedule::command('app:sync-espn-rosters')
+    ->dailyAt('04:15')
     ->timezone('America/New_York')
     ->withoutOverlapping()
     ->onOneServer();

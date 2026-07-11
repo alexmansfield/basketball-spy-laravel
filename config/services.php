@@ -52,6 +52,10 @@ return [
         'base_url' => 'https://api.balldontlie.io/v1',
     ],
 
+    'espn' => [
+        'timeout' => env('ESPN_TIMEOUT', 30),
+    ],
+
     'sportradar' => [
         'key' => env('SPORTRADAR_API_KEY'),
         'access_level' => env('SPORTRADAR_ACCESS_LEVEL', 'trial'),

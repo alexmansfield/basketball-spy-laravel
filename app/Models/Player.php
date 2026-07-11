@@ -30,6 +30,7 @@ class Player extends Model
         'extra_attributes',
         'balldontlie_id',
         'nba_player_id',
+        'espn_id',
         'is_active',
     ];
 
